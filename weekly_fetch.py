@@ -11,7 +11,7 @@ EXCHANGE_LIST = ["NSE", "BSE"]
 def get_weekly_data():
     # --- USER INPUT ---
     symbol = input("📥 Enter stock symbol (e.g., RPOWER, KMSUGAR): ").strip().upper()
-    FROM_DATE = "2010-01-01"
+    FROM_DATE = (dt.datetime.today() - pd.Timedelta(days=1900)).strftime("%Y-%m-%d")
     TO_DATE = dt.datetime.today().strftime("%Y-%m-%d")
 
     # --- AUTHENTICATE ---
