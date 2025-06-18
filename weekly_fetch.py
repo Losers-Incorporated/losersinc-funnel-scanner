@@ -34,16 +34,31 @@ if not token:
     sys.exit()
 
 print(f"🔍 Found token for {symbol} on {exchange}")
-
-# --- HISTORICAL DAILY DATA ---
 print(f"📊 Fetching daily data for {symbol} from {FROM_DATE} to {TO_DATE}...")
-data = kite.historical_data(token, FROM_DATE, TO_DATE, interval="day")
 
+# --- HANDLE ZERODHA'S 2000-DAY LIMIT ---
+from_date = pd.to_datetime(FROM_DATE)
+to_date = pd.to_datetime(TO_DATE)
+all_data = []
+
+while from_date < to_date:
+    chunk_end = min(from_date + pd.Timedelta(days=1900), to_date)
+    chunk = kite.historical_data(
+        instrument_token=token,
+        from_date=from_date.strftime("%Y-%m-%d"),
+        to_date=chunk_end.strftime("%Y-%m-%d"),
+        interval="day"
+    )
+    all_data.extend(chunk)
+    from_date = chunk_end + pd.Timedelta(days=1)
+
+data = all_data
+
+# --- CREATE WEEKLY OHLCV DATAFRAME ---
 df = pd.DataFrame(data)
 df['date'] = pd.to_datetime(df['date'])
 df.set_index('date', inplace=True)
 
-# --- CONVERT TO WEEKLY OHLCV ---
 weekly = df.resample('W').agg({
     'open': 'first',
     'high': 'max',
@@ -56,6 +71,7 @@ weekly = df.resample('W').agg({
 os.makedirs("data", exist_ok=True)
 out_path = f"data/{symbol}_weekly_output.csv"
 weekly.to_csv(out_path)
+
 print(f"\n✅ Weekly data saved to: {out_path}")
 print("\n📤 Last 5 rows of weekly data:")
 print(weekly.tail())
