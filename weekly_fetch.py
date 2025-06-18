@@ -73,3 +73,7 @@ def get_weekly_data():
     print(weekly.tail())
 
     return symbol, weekly
+    
+# --- Safe entry point ---
+if __name__ == "__main__":
+    symbol, weekly = get_weekly_data()
