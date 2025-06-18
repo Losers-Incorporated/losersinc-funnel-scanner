@@ -11,14 +11,8 @@ EXCHANGE_LIST = ["NSE", "BSE"]
 
 # --- USER INPUT ---
 symbol = input("📥 Enter stock symbol (e.g., RPOWER, KMSUGAR): ").strip().upper()
-
-# --- AUTO-RANGE LAST 1900 DAYS ---
-TO_DATE = dt.datetime.today()
-FROM_DATE = TO_DATE - pd.Timedelta(days=1900)
-
-# Convert to string format for Zerodha API
-FROM_DATE = FROM_DATE.strftime("%Y-%m-%d")
-TO_DATE = TO_DATE.strftime("%Y-%m-%d")
+FROM_DATE = "2010-01-01"
+TO_DATE = dt.datetime.today().strftime("%Y-%m-%d")
 
 # --- AUTHENTICATE ---
 kite = KiteConnect(api_key=API_KEY)
@@ -42,16 +36,24 @@ if not token:
 print(f"🔍 Found token for {symbol} on {exchange}")
 print(f"📊 Fetching daily data for {symbol} from {FROM_DATE} to {TO_DATE}...")
 
-# --- FETCH DATA WITHIN 1900-DAY LIMIT ---
-data = kite.historical_data(
-    instrument_token=token,
-    from_date=FROM_DATE,
-    to_date=TO_DATE,
-    interval="day"
-)
+# --- CHUNKED FETCH (Fixes 2000-day limit) ---
+from_date = pd.to_datetime(FROM_DATE)
+to_date = pd.to_datetime(TO_DATE)
+all_data = []
 
-# --- CREATE WEEKLY OHLCV DATAFRAME ---
-df = pd.DataFrame(data)
+while from_date < to_date:
+    chunk_end = min(from_date + pd.Timedelta(days=1900), to_date)
+    chunk = kite.historical_data(
+        instrument_token=token,
+        from_date=from_date.strftime("%Y-%m-%d"),
+        to_date=chunk_end.strftime("%Y-%m-%d"),
+        interval="day"
+    )
+    all_data.extend(chunk)
+    from_date = chunk_end + pd.Timedelta(days=1)
+
+# --- CONVERT TO WEEKLY ---
+df = pd.DataFrame(all_data)
 df['date'] = pd.to_datetime(df['date'])
 df.set_index('date', inplace=True)
 
@@ -63,7 +65,7 @@ weekly = df.resample('W').agg({
     'volume': 'sum'
 }).dropna()
 
-# --- SAVE AND PRINT ---
+# --- SAVE & OUTPUT ---
 os.makedirs("data", exist_ok=True)
 out_path = f"data/{symbol}_weekly_output.csv"
 weekly.to_csv(out_path)
