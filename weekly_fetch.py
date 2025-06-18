@@ -12,7 +12,7 @@ EXCHANGE_LIST = ["NSE", "BSE"]
 
 def get_weekly_data_override(symbol):
     """Fetches full weekly OHLCV from Kite Connect in 2000-day safe chunks."""
-    FROM_DATE = "2010-01-01"
+   FROM_DATE = (dt.datetime.today() - pd.Timedelta(days=1825)).strftime("%Y-%m-%d")  # last ~5 years only
     TO_DATE = dt.datetime.today().strftime("%Y-%m-%d")
 
     # --- AUTHENTICATE ---
