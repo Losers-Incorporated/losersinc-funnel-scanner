@@ -73,3 +73,6 @@ weekly.to_csv(out_path)
 print(f"\n✅ Weekly data saved to: {out_path}")
 print("\n📤 Last 5 rows of weekly data:")
 print(weekly.tail())
+# Only add this if running as import, not script
+def get_weekly_data():
+    return symbol, weekly
